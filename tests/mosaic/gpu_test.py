@@ -1322,7 +1322,12 @@ class WGMMATest(TestCase):
         kernel, (1, 1, 1), (128, 1, 1), (x, y), out_shape, scratch_shape
     )(x, y)
     x32, y32 = x.astype(np.float32), y.astype(np.float32)
-    ref = (x32.T if lhs_transpose else x32) @ (y32.T if rhs_transpose else y32)
+    lhs_ref = x32.T if lhs_transpose else x32
+    rhs_ref = y32.T if rhs_transpose else y32
+    if in_mlir_dtype == ir.F32Type.get():
+      ref = jnp.matmul(lhs_ref, rhs_ref, precision="tensorfloat32")
+    else:
+      ref = jnp.matmul(lhs_ref, rhs_ref, precision="highest")
     atol = 2e-2 if jax_out_dtype == jnp.float16 else 5e-6
     if isinstance(in_mlir_dtype, ir.IntegerType) and isinstance(out_mlir_dtype, ir.IntegerType):
       atol = 0
