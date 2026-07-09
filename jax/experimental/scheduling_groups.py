@@ -64,8 +64,8 @@ xla_metadata_call_p.def_abstract_eval(_xla_metadata_call_abstract_eval)
 
 
 def attr_get(x):
-  if isinstance(x, str):
-    return ir.StringAttr.get(x)
+  if isinstance(x, (str, int, float, bool)):
+    return ir.StringAttr.get(str(x))
   else:
     raise NotImplementedError(f'mlir attr handler for {type(x)=}')
 
