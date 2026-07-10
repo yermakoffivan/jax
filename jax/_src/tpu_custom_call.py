@@ -24,7 +24,7 @@ import enum
 import io
 import json
 import logging
-from typing import Any, TypedDict, cast
+from typing import Any, TypedDict
 
 from jax._src import api
 from jax._src import config
@@ -225,6 +225,7 @@ class CustomCallBackendConfig:
     with ctx, ir.Location.unknown():
       ctx.allow_unregistered_dialects = True
       module = ir.Module.parse(self.lowered_module_asm)
+
       pipeline = PassManager.parse(
           "builtin.module(mosaic-serde{serialize=false},mosaic-serde{serialize=true"
           f" target-version={version}}})",
@@ -446,6 +447,8 @@ def _tpu_custom_call_lowering(
   # If the IR version we originally generated the ASM string with is not the
   # same as the one we should have used, we need to downgrade the ASM string.
   ir_version = get_ir_version(ctx)
+  # Part of downgrading is to serialize the module, so let's mark it with the
+  # version.
   if (
       ir_version is not None and
       ir_version != config.lowered_module_asm_version
@@ -966,7 +969,7 @@ def lowered_as_tpu_kernel(
     flags: dict[str, bool | int | float] | None = None,
     allow_input_fusion: Sequence[bool] | None = None,
     input_output_aliases: tuple[tuple[int, int], ...] = (),
-    serialization_format: int | None = None,
+    serialization_format: int | None = 1,
     internal_scratch_in_bytes: int | None = None,
     disable_bounds_checks: bool = False,
     disable_semaphore_checks: bool = False,
@@ -976,10 +979,23 @@ def lowered_as_tpu_kernel(
     opt_level: OptLevel | None = None,
 ) -> Callable[..., Any]:
   device_type = _get_device_type(lowered_module)
-  lowered_module_asm = cast(
-      bytes,
-      lowered_module.operation.get_asm(binary=True, enable_debug_info=True),
-  )
+  ctx = lowered_module.context
+  with ctx, lowered_module.operation.location as _:
+    module_op = lowered_module.operation.clone(ip=False)
+    # Temporarily allow unregistered dialects for serialization.
+    prev_allow_unregistered_dialects = ctx.allow_unregistered_dialects
+    ctx.allow_unregistered_dialects = True
+    try:
+      pipeline = PassManager.parse(
+          "builtin.module(mosaic-serde{serialize=true use-highest-version=true})"
+      )
+      pipeline.run(module_op)
+    finally:
+      ctx.allow_unregistered_dialects = prev_allow_unregistered_dialects
+    bytecode_buffer = io.BytesIO()
+    module_op.write_bytecode(bytecode_buffer, desired_version=0)
+    lowered_module_asm = bytecode_buffer.getvalue()
+
   if isinstance(has_side_effects, bool):
     has_side_effects = (
         TpuSideEffectType.PURE
@@ -988,7 +1004,7 @@ def lowered_as_tpu_kernel(
     )
   config = _lowered_to_custom_call_config(
       lowered_module_asm,
-      lowered_module_asm_version=None,
+      lowered_module_asm_version=15,
       vmem_limit_bytes=vmem_limit_bytes,
       cost_estimate=cost_estimate,
       flags=flags,

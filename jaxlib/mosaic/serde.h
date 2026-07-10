@@ -32,6 +32,8 @@ struct SerdeOptions {
   llvm::StringRef version_attr_name;
   int serialize_version;  // target version for serialization, must be -1 when
                           // deserializing
+  bool use_highest_version = false;  // whether to use the highest version as
+                                     // the target version for serialization
 };
 
 // A rule for upgrading or downgrading an operation.

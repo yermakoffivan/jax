@@ -32,6 +32,7 @@ namespace mlir::tpu {
 struct MosaicSerdePassOptions {
   bool serialize;
   int target_version;
+  bool use_highest_version;
 };
 
 struct MosaicSerdePass : public jaxlib::mlir::Pass<MosaicSerdePass, ModuleOp> {
@@ -70,6 +71,8 @@ struct MosaicSerdePass : public jaxlib::mlir::Pass<MosaicSerdePass, ModuleOp> {
       *this, "keep-version-attr", llvm::cl::desc(""), llvm::cl::init(true)};
   ::mlir::Pass::Option<int> target_version{*this, "target-version",
                                            llvm::cl::desc("")};
+  ::mlir::Pass::Option<bool> use_highest_version{*this, "use-highest-version",
+                                                 llvm::cl::desc("")};
 };
 
 inline std::unique_ptr<::mlir::Pass> createMosaicSerdePass() {

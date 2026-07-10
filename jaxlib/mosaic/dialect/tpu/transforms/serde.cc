@@ -702,7 +702,8 @@ void MosaicSerdePass::runOnOperation() {
           {.dialect_prefix = kMangledDialect,
            .highest_version = kVersion,
            .version_attr_name = kVersionAttrName,
-           .serialize_version = serialize_version},
+           .serialize_version = serialize_version,
+           .use_highest_version = use_highest_version},
           /*keep_version_attr=*/keep_version_attr))) {
     signalPassFailure();
   }

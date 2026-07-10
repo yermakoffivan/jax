@@ -57,7 +57,8 @@ mlir::LogicalResult RunSerde(
     const llvm::StringMap<SerdeRuleType>& downgrade_rules, bool serialize,
     SerdeOptions options, bool keep_version_attr) {
   int version = options.highest_version;
-  int serialize_version = options.serialize_version;
+  int serialize_version =
+      (options.use_highest_version) ? version : options.serialize_version;
   if (!serialize && serialize_version != -1) {
     module.emitError("Cannot deserialize to a specific version");
     return mlir::failure();
