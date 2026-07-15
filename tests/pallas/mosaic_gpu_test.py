@@ -1152,6 +1152,41 @@ class PallasCallTest(PallasTest, jtu.CudaArchSpecificTest):
     x = jnp.arange(256).astype(jnp.float32)
     np.testing.assert_array_equal(kernel(x)[indexer], x[indexer] + 1.0)
 
+  def test_copy_gmem_to_smem_aval_fails_mismatched_dtypes(self):
+    @self.kernel(
+        out_type=jax.ShapeDtypeStruct([256], jnp.bfloat16),
+        scratch_types=[
+            plgpu.SMEM((256,), jnp.float32),
+            plgpu.Barrier(),
+        ],
+    )
+    def kernel(o_ref, scratch_ref, barrier_ref):
+      plgpu.copy_gmem_to_smem(o_ref, scratch_ref, barrier_ref)
+      plgpu.barrier_wait(barrier_ref)
+
+    with self.assertRaisesRegex(
+        ValueError,
+        "Mismatch.*src.*dtype.*bfloat16.*dst.*dtype.*float32",
+    ):
+      jax.jit(kernel).lower()
+
+  def test_copy_smem_to_gmem_aval_fails_mismatched_dtypes(self):
+    @self.kernel(
+        out_type=jax.ShapeDtypeStruct([256], jnp.bfloat16),
+        scratch_types=[
+            plgpu.SMEM((256,), jnp.float32),
+        ],
+    )
+    def kernel(o_ref, scratch_ref):
+      plgpu.copy_smem_to_gmem(scratch_ref, o_ref)
+      plgpu.wait_smem_to_gmem(0)
+
+    with self.assertRaisesRegex(
+        ValueError,
+        "Mismatch.*src.*dtype.*float32.*dst.*dtype.*bfloat16",
+    ):
+      jax.jit(kernel).lower()
+
   @parameterized.product(indexer=[..., slice(128), slice(None, 128)])
   def test_copy_gmem_to_smem_cp_async(self, indexer):
     self.skip_if_wg_semantics()

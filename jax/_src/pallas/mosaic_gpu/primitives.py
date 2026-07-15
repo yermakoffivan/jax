@@ -88,6 +88,35 @@ def _check_ref(
     )
 
 
+def _check_refs_dtype(
+    src_aval: object,
+    dst_aval: object,
+    flat_transforms: Sequence[Any],
+    src_transforms_treedef: tree_util.PyTreeDef,
+    dst_transforms_treedef: tree_util.PyTreeDef,
+    src_name: str = "src",
+    dst_name: str = "dst",
+) -> None:
+  flat_src_transforms, flat_dst_transforms = util.split_list(
+      flat_transforms,
+      [
+          src_transforms_treedef.num_leaves,
+          dst_transforms_treedef.num_leaves,
+      ],
+  )[:2]
+  src_transforms = src_transforms_treedef.unflatten(flat_src_transforms)
+  dst_transforms = dst_transforms_treedef.unflatten(flat_dst_transforms)
+
+  src_ref = pallas_core.TransformedRef(src_aval, src_transforms)
+  dst_ref = pallas_core.TransformedRef(dst_aval, dst_transforms)
+
+  if src_ref.dtype != dst_ref.dtype:
+    raise ValueError(
+        f"Mismatch between '{src_name}' dtype ({src_ref.dtype}) and "
+        f"'{dst_name}' dtype ({dst_ref.dtype})"
+    )
+
+
 print_layout_p = jax_core.Primitive("print_layout")
 print_layout_p.multiple_results = True
 
@@ -159,7 +188,15 @@ copy_smem_to_gmem_p.multiple_results = True
 def _copy_smem_to_gmem_abstract_eval(src, dst, *args, **params):
   _check_ref(src, "src", gpu_core.SMEM)
   _check_ref(dst, "dst", gpu_core.GMEM)
-  del args, params  # Unused.
+  _check_refs_dtype(
+      src,
+      dst,
+      args,
+      params["src_transforms_treedef"],
+      params["dst_transforms_treedef"],
+      src_name="src",
+      dst_name="dst",
+  )
   return (), {state.ReadEffect(0), state.WriteEffect(1)}
 
 
@@ -687,10 +724,18 @@ copy_gmem_to_smem_p.multiple_results = True
 
 @copy_gmem_to_smem_p.def_effectful_abstract_eval
 def _copy_gmem_to_smem_abstract_eval(src, dst, barrier, *args, **params):
-  del args, params  # Unused.
   _check_ref(src, "src", gpu_core.GMEM)
   _check_ref(dst, "dst", gpu_core.SMEM)
   _check_ref(barrier, "barrier", gpu_core.SMEM)
+  _check_refs_dtype(
+      src,
+      dst,
+      args,
+      params["src_transforms_treedef"],
+      params["dst_transforms_treedef"],
+      src_name="src",
+      dst_name="dst",
+  )
   return (), {state.ReadEffect(0), state.WriteEffect(1)}
 
 
