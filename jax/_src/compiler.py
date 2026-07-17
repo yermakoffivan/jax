@@ -208,7 +208,11 @@ def get_compile_options(
     env_options_overrides = dict(env_options_overrides)
     for name in overrides_on_build_options:
       if name in env_options_overrides:
-        setattr(build_options, name, env_options_overrides.pop(name))
+        setattr(
+            build_options,
+            name,
+            config.EffortLevel(env_options_overrides.pop(name)).value,
+        )
     compile_options.env_option_overrides = list(env_options_overrides.items())
 
   debug_options = compile_options.executable_build_options.debug_options

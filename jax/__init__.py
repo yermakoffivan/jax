@@ -77,6 +77,7 @@ from jax._src.config import (
   remove_size_one_mesh_axis_from_type as remove_size_one_mesh_axis_from_type,
   thread_guard as thread_guard,
   auto_pcast as auto_pcast,
+  EffortLevel as EffortLevel,
 )
 
 from jax._src.core import ensure_compile_time_eval as ensure_compile_time_eval
