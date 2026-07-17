@@ -256,6 +256,7 @@ cc_library(
         "-Wl,--export-dynamic-symbol='nvshmemx_barrier_all_on_stream'",
         "-Wl,--export-dynamic-symbol='nvshmemx_cumodule_finalize'",
         "-Wl,--export-dynamic-symbol='nvshmemx_cumodule_init'",
+        "-Wl,--export-dynamic-symbol='nvshmemx_cumodule_finalize'",
         "-Wl,--export-dynamic-symbol='nvshmemx_init_status'",
         "-Wl,--export-dynamic-symbol='nvshmemx_mc_ptr'",
     ],
