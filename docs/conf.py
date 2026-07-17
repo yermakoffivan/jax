@@ -88,12 +88,15 @@ extensions = [
     'sphinxcontrib.mermaid'
 ]
 
+# Define local cache paths
+cache_dir = os.path.join(os.path.dirname(__file__), 'intersphinx_cache')
+
 intersphinx_mapping = {
-    'array_api': ('https://data-apis.org/array-api/2023.12/', None),
-    'python': ('https://docs.python.org/3/', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
+    'array_api': ('https://data-apis.org/array-api/2023.12/', (os.path.join(cache_dir, 'array_api.inv'), None)),
+    'python': ('https://docs.python.org/3/', (os.path.join(cache_dir, 'python.inv'), None)),
+    'numpy': ('https://numpy.org/doc/stable/', (os.path.join(cache_dir, 'numpy.inv'), None)),
     # TODO(phawkins,jakevdp): revert to stable scipy docs when it is up again.
-    'scipy': ('https://scipy.github.io/devdocs/', None),
+    'scipy': ('https://scipy.github.io/devdocs/', (os.path.join(cache_dir, 'scipy.inv'), None)),
 }
 
 suppress_warnings = [

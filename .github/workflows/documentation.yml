@@ -96,6 +96,31 @@ jobs:
         uv pip install --python "$PYTHON_BIN" -r docs/requirements.txt
         echo "### documentation_render dependency install (${{ matrix.python-version }})" >> "$GITHUB_STEP_SUMMARY"
         echo "- duration: $(( $(date +%s) - PKG_INSTALL_START_TIME ))s" >> "$GITHUB_STEP_SUMMARY"
+    - name: Get current date for cache
+      id: date
+      run: echo "date=$(date -u '+%Y-%m-%d')" >> "$GITHUB_ENV"
+    - name: Cache Intersphinx Inventories
+      uses: actions/cache@v4
+      with:
+        path: docs/intersphinx_cache
+        # Key forces cache expiration and fresh download daily
+        key: intersphinx-${{ runner.os }}-${{ env.date }}
+    - name: Fetch Intersphinx Inventories
+      run: |
+        mkdir -p docs/intersphinx_cache
+        # Download intersphinx inventories if not cached
+        if [ ! -f docs/intersphinx_cache/python.inv ]; then
+          curl --retry 5 --retry-connrefused --max-time 10 -sSfL https://docs.python.org/3/objects.inv -o docs/intersphinx_cache/python.inv
+        fi
+        if [ ! -f docs/intersphinx_cache/array_api.inv ]; then
+          curl --retry 5 --retry-connrefused --max-time 10 -sSfL https://data-apis.org/array-api/2023.12/objects.inv -o docs/intersphinx_cache/array_api.inv
+        fi
+        if [ ! -f docs/intersphinx_cache/numpy.inv ]; then
+          curl --retry 5 --retry-connrefused --max-time 10 -sSfL https://numpy.org/doc/stable/objects.inv -o docs/intersphinx_cache/numpy.inv
+        fi
+        if [ ! -f docs/intersphinx_cache/scipy.inv ]; then
+          curl --retry 5 --retry-connrefused --max-time 10 -sSfL https://scipy.github.io/devdocs/objects.inv -o docs/intersphinx_cache/scipy.inv
+        fi
     - name: Render documentation
       env:
         PYTHON_BIN: ${{ steps.setup_python.outputs.python-bin }}
